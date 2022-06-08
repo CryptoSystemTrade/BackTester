@@ -1,11 +1,11 @@
 # Tool for Backtest in Python
 
-### environment 
+### Environment 
 - Python 3.9.2
 
 
 ### Setting
-- install poetry 
+- install poetry   
 https://cocoatomo.github.io/poetry-ja/
 
 ```bash
