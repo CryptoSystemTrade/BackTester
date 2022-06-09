@@ -84,19 +84,19 @@ class VectorTester:
         start = time.time()
 
         # 各データをリストにしておく
-        buy_signals: List[int] = df.b_sig.values
-        sell_signals: List[int] = df.s_sig.values
+        buy_signals: List[int] = df["b_sig"].values
+        sell_signals: List[int] = df["s_sig"].values
 
         if self.take_profit:
-            buy_tp_signals = df.b_tp_sig.values
-            sell_tp_signals = df.b_tp_sig.values
+            buy_tp_signals = df["b_tp_sig"].values
+            sell_tp_signals = df["s_tp_sig"].values
 
         if "timestamp" in df.columns:
-            timestamp = df.timestamp.values
+            timestamp = df["timestamp"].values
         elif "time" in df.columns:
-            timestamp = df.time.values
+            timestamp = df["time"].values
 
-        close = df.close.values
+        close = df["close"].values
 
         # オーダー情報のリスト
         orders = []
@@ -156,31 +156,31 @@ class VectorTester:
                 # orders[-1][-1] 最後のprice
                 Long_loss_cut: bool = current_position > 0 and orders[-1][-1] - close[i] > self.loss_cut_rate
                 Short_loss_cut: bool = current_position < 0 and orders[-1][-1] - close[i] < -self.loss_cut_rate
-            if Long_loss_cut:
-                # positionの履歴に追加
-                if self.just_loss_cut:
-                    price = orders[-1][-1] - self.loss_cut_rate
-                else:
-                    price = close[i]
-                # positionの履歴に追加
-                order = [i, timestamp[i], -current_position, "Sell", price]
-                current_position = 0
-                orders.append(order)
-                # print(f"losscut loopnum:{i}　現在のポジションは{current_position}です。")
-            elif Short_loss_cut:
-                # positionの履歴に追加
-                if self.just_loss_cut:
-                    price = orders[-1][-1] + self.loss_cut_rate
-                else:
-                    price = close[i]
-                # positionの履歴に追加
-                order = [i, timestamp[i], -current_position, "Buy", price]
-                current_position = 0
-                orders.append(order)
-                print("short is cut")
-                # print(f"losscut loopnum:{i}　現在のポジションは{current_position}です。")
+                if Long_loss_cut:
+                    # positionの履歴に追加
+                    if self.just_loss_cut:
+                        price = orders[-1][-1] - self.loss_cut_rate
+                    else:
+                        price = close[i]
+                    # positionの履歴に追加
+                    order = [i, timestamp[i], -current_position, "SELL", price]
+                    current_position = 0
+                    orders.append(order)
+                    # print(f"losscut loopnum:{i}　現在のポジションは{current_position}です。")
+                elif Short_loss_cut:
+                    # positionの履歴に追加
+                    if self.just_loss_cut:
+                        price = orders[-1][-1] + self.loss_cut_rate
+                    else:
+                        price = close[i]
+                    # positionの履歴に追加
+                    order = [i, timestamp[i], -current_position, "BUY", price]
+                    current_position = 0
+                    orders.append(order)
+                    print("short is cut")
+                    # print(f"losscut loopnum:{i}　現在のポジションは{current_position}です。")
 
-            order_df = pd.DataFrame(orders, columns=["id", "time", "sizes", "side", "price"])
+            order_df = pd.DataFrame(orders, columns=["id", "time", "lot", "side", "price"])
             print(" ----   finish backtest   ----")
             elapsed_time = time.time() - start
             print(f" ----   elapsed time: {elapsed_time}   ---- ")
@@ -211,13 +211,13 @@ class VectorTester:
         start = time.time()
 
         # それぞれをnumpyに変換
-        size = df.sizes.values
+        size = df["lot"].values
         # timestamp = df.time.values
-        price = df.price.values
+        price = df["price"].values
         pct_price = df["price"].pct_change().values
 
         # buy sellの書き換え
-        size = df["sizes"].values
+        # size = df["lot"].values
 
         # 計算用PL
         PLs = np.zeros(len(df))
@@ -226,6 +226,7 @@ class VectorTester:
         for i in range(1, len(df)):
             # 手数料がある場合
             if comfee:
+                # ポジションサイズ*価格変動値 - 手数料
                 PLs[i] = pct_price[i] * cumsum_position_size[i - 1] - comfee * price[i] * cumsum_position_size[i]
             else:
                 PLs[i] = pct_price[i] * cumsum_position_size[i - 1]
@@ -247,10 +248,10 @@ class VectorTester:
         win_rate = tmp / (len(PLs) - none_cnt)
 
         # 実現損益
-        pl = PL_graph[-1] - initial
+        realized_pl = PL_graph[-1] - initial
 
         # 平均損益
-        avg_pl = pl / len(PLs)
+        avg_pl = realized_pl / len(PLs)
 
         # 総利益
         profit_total = df["PL"][df["PL"] > 0].sum()
@@ -275,7 +276,7 @@ class VectorTester:
         df["_cumsum"] = cumsum_position_size
         print(
             f"""
-            取引回数: {len(PLs)} \n実現損益: {pl} \n勝率: {win_rate} \n
+            取引回数: {len(PLs)} \n実現損益: {realized_pl} \n勝率: {win_rate} \n
             平均損益: {avg_pl} \n総利益: {profit_total} \n
             総損失: {loss_total}\nPF: {PF}\n最大DD: {DD_max}({DD_per}%)
             """
