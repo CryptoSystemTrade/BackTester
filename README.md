@@ -19,5 +19,5 @@ poetry shell
 ```bash
 #lint
 pysen run lint
-black .
+black run format
 ```
