@@ -1,8 +1,9 @@
+import copy
 import time
 from typing import List
+
 import numpy as np
 import pandas as pd
-from scipy.optimize import brute
 
 
 class VectorTester:
@@ -36,7 +37,7 @@ class VectorTester:
     loss_cut_rate : float
         ロスカットレート
 
-    just_loss_cut : bool
+    just_loss_cut : bool | None
         true => ロスカットが価格通りに執行
         false => ろうそく足のclose価格で執行される
 
@@ -52,8 +53,8 @@ class VectorTester:
         order_lot: int = 1,
         pyramitting: int = 1,
         take_profit: bool = False,
-        loss_cut_rate=None,
-        just_loss_cut=False,
+        loss_cut_rate: float = 0,
+        just_loss_cut: bool = False,
     ):
         self.symbol = symbol
         self.results = None
@@ -65,6 +66,20 @@ class VectorTester:
         self.just_loss_cut = just_loss_cut
 
     def run_backtest(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        バックテストの実行
+        売買条件、利確損切り条件が既に入力されたデータに対して行う
+
+        Parameters
+        ----------
+        df : DataFrame
+            バックテスト元データ
+
+        Returns
+        ----------
+        order_df : DataFrame
+            売買履歴のデータフレーム
+        """
         print("----------start backtest----------")
         start = time.time()
 
@@ -171,3 +186,100 @@ class VectorTester:
             print(f" ----   elapsed time: {elapsed_time}   ---- ")
             return order_df
 
+    def make_pl(self, df: pd.DataFrame, comfee: int = 0, initial: int = 100) -> pd.DataFrame:
+        """
+        オーダー情報を元に損益計算を行う
+
+        Attributes
+        ----------
+        df : DataFrame
+            size : float or int
+            time : unixtime or datetime
+            price : float or int
+        initial : int
+            初期資金
+        comfee : int
+            手数料
+
+        Returns
+        ----------
+        df : DataFrame
+            分析結果のデータフレーム
+        """
+
+        print(" ----- Make PL Graph -----")
+        start = time.time()
+
+        # それぞれをnumpyに変換
+        size = df.sizes.values
+        # timestamp = df.time.values
+        price = df.price.values
+        pct_price = df["price"].pct_change().values
+
+        # buy sellの書き換え
+        size = df["sizes"].values
+
+        # 計算用PL
+        PLs = np.zeros(len(df))
+
+        cumsum_position_size = np.cumsum(size)
+        for i in range(1, len(df)):
+            # 手数料がある場合
+            if comfee:
+                PLs[i] = pct_price[i] * cumsum_position_size[i - 1] - comfee * price[i] * cumsum_position_size[i]
+            else:
+                PLs[i] = pct_price[i] * cumsum_position_size[i - 1]
+
+        # 一回ごとの損益
+        df["PL"] = PLs
+        tmp_PLs = copy.copy(PLs)
+        tmp_PLs[0] += initial
+
+        # 累積損益
+        PL_graph = np.cumsum(tmp_PLs)
+        df["PL_graph"] = PL_graph
+
+        # 勝率
+        tmp = PLs > 0
+        none_cnt = PLs == 0
+        none_cnt = none_cnt.sum()
+        tmp = tmp.sum()
+        win_rate = tmp / (len(PLs) - none_cnt)
+
+        # 実現損益
+        pl = PL_graph[-1] - initial
+
+        # 平均損益
+        avg_pl = pl / len(PLs)
+
+        # 総利益
+        profit_total = df["PL"][df["PL"] > 0].sum()
+
+        # 総損失
+        loss_total = df["PL"][df["PL"] < 0].sum()
+
+        # PF
+        PF = profit_total / abs(loss_total)
+
+        # DD_max
+        PL_max = 0.00
+        DD_max = 0.00
+        DD_per = 0.00
+        for i in df["PL_graph"]:
+            if PL_max < i:
+                PL_max = i
+            DD = PL_max - i
+            if DD_max < DD:
+                DD_max = DD
+                DD_per = (DD_max / PL_max) * 100
+        df["_cumsum"] = cumsum_position_size
+        print(
+            f"""
+            取引回数: {len(PLs)} \n実現損益: {pl} \n勝率: {win_rate} \n
+            平均損益: {avg_pl} \n総利益: {profit_total} \n
+            総損失: {loss_total}\nPF: {PF}\n最大DD: {DD_max}({DD_per}%)
+            """
+        )
+        elapsed_time = time.time() - start
+        print(f" ----   elapsed time: {elapsed_time}   ---- ")
+        return df
