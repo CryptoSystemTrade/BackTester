@@ -4,7 +4,7 @@ import pandas as pd
 def timestamp_change(df: pd.DataFrame, span: int) -> pd.DataFrame:
     """
     受け取ったdataframeの時間足を指定した分足に変換
-    
+
     Parameters
     ----------
     df : DataFrame
@@ -18,6 +18,7 @@ def timestamp_change(df: pd.DataFrame, span: int) -> pd.DataFrame:
         指定した時間足で丸めたもの
     """
     cols = ["open", "high", "low", "close", "symbol", "timestamp"]
+    symbol = df["symbol"].values[0]
     # span刻みでのstart時刻
     if df["timestamp"].values[0] % (span * 60) == 0:
         start = df["timestamp"].values[0]
@@ -35,7 +36,7 @@ def timestamp_change(df: pd.DataFrame, span: int) -> pd.DataFrame:
         min_price = term_df.min()["low"]
         open_price = term_df["open"].values[0]
         close_price = term_df["close"].values[-1]
-        raw = [open_price, max_price, min_price, close_price, df["symbol"], timestamp]
+        raw = [open_price, max_price, min_price, close_price, symbol, timestamp]
         data.append(raw)
         start += span * 60
     result_df = pd.DataFrame(data)
