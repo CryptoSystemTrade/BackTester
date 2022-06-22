@@ -49,7 +49,6 @@ class VectorTester:
     def __init__(
         self,
         symbol: str,
-        df: pd.DataFrame,
         order_lot: int = 1,
         pyramitting: int = 1,
         take_profit: bool = False,
@@ -58,7 +57,6 @@ class VectorTester:
     ):
         self.symbol = symbol
         self.results = None
-        self.df = df
         self.order_lot = order_lot
         self.pyramitting = pyramitting
         self.take_profit = take_profit
@@ -180,11 +178,11 @@ class VectorTester:
                     print("short is cut")
                     # print(f"losscut loopnum:{i}　現在のポジションは{current_position}です。")
 
-            order_df = pd.DataFrame(orders, columns=["id", "time", "lot", "side", "price"])
-            print(" ----   finish backtest   ----")
-            elapsed_time = time.time() - start
-            print(f" ----   elapsed time: {elapsed_time}   ---- ")
-            return order_df
+        order_df = pd.DataFrame(orders, columns=["id", "time", "lot", "side", "price"])
+        print(" ----   finish backtest   ----")
+        elapsed_time = time.time() - start
+        print(f" ----   elapsed time: {elapsed_time}   ---- ")
+        return order_df
 
     def make_pl(self, df: pd.DataFrame, comfee: int = 0, initial: int = 100) -> pd.DataFrame:
         """
