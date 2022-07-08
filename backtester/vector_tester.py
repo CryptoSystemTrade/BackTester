@@ -119,7 +119,7 @@ class VectorTester:
                 current_position += self.order_lot
 
                 orders.append(order)
-                # print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
+                print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
             elif SELL:
                 price = close[i]
                 # 1回分のorder
@@ -127,7 +127,7 @@ class VectorTester:
                 current_position -= self.order_lot
 
                 orders.append(order)
-                # print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
+                print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
 
             # take profit order
             if self.take_profit:
@@ -138,15 +138,15 @@ class VectorTester:
 
                     current_position = 0
                     orders.append(order)
-                    # print(f"sell loopnum:{i}　現在のポジションは{current_position}です。")
+                    print(f"sell loopnum:{i}　現在のポジションは{current_position}です。")
 
                 elif SELL_TAKE_PROFIT and current_position > 0:
                     price = close[i]
-                    order = [i, timestamp[i], current_position, "SELL", price]
+                    order = [i, timestamp[i], -current_position, "SELL", price]
 
                     current_position = 0
                     orders.append(order)
-                    # print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
+                    print(f"buy loopnum:{i}　現在のポジションは{current_position}です。")
 
             # loss cut
             if self.loss_cut_rate and len(orders):
