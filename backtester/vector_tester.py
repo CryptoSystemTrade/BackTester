@@ -212,7 +212,7 @@ class VectorTester:
         size = df["lot"].values
         # timestamp = df.time.values
         price = df["price"].values
-        pct_price = df["price"].pct_change().values
+        pct_price = df["price"].diff().values
 
         # buy sellの書き換え
         # size = df["lot"].values
@@ -225,7 +225,9 @@ class VectorTester:
             # 手数料がある場合
             if comfee:
                 # ポジションサイズ*価格変動値 - 手数料
-                PLs[i] = pct_price[i] * cumsum_position_size[i - 1] - comfee * price[i] * cumsum_position_size[i]
+                if cumsum_position_size[i-1] != 0:
+                    PLs[i] = ((price[i] - price[i-1]) * cumsum_position_size[i-1] ) - comfee * price[i] * cumsum_position_size[i]
+                    # PLs[i] = pct_price[i] * cumsum_position_size[i - 1] - comfee * price[i] * cumsum_position_size[i]
             else:
                 PLs[i] = pct_price[i] * cumsum_position_size[i - 1]
 
